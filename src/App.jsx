@@ -17,8 +17,20 @@ const App = () => {
   const { connectWallet, address, error, provider } = useWeb3();
   console.log("👋 Address:", address)
 
-  // State variable for us to know if user has our NFT.
+  // The signer is required to sign transactions on the blockchain.
+  // Without it we can only read data, not write.
+  const signer = provider ? provider.getSigner() : undefined;
+
   const [hasClaimedNFT, setHasClaimedNFT] = useState(false);
+  // isClaiming lets us easily keep a loading state while the NFT is minting.
+  const [isClaiming, setIsClaiming] = useState(false);
+
+  // Another useEffect!
+  useEffect(() => {
+    // We pass the signer to the sdk, which enables us to interact with
+    // our deployed contract!
+    sdk.setProviderOrSigner(signer);
+  }, [signer]);
 
   useEffect(() => {
     // If they don't have an connected wallet, exit!
@@ -58,13 +70,41 @@ const App = () => {
       </div>
     );
   }
+
+  const mintNft = () => {
+    setIsClaiming(true);
+    // Call bundleDropModule.claim("0", 1) to mint nft to user's wallet.
+    bundleDropModule
+    .claim("0", 1)
+    .then(() => {
+      // Set claim state.
+      setHasClaimedNFT(true);
+      // Show user their fancy new NFT!
+      console.log(
+        `🌊 Successfully Minted! Check it out on OpenSea: https://testnets.opensea.io/assets/${bundleDropModule.address}/0`
+      );
+    })
+    .catch((err) => {
+      console.error("failed to claim", err);
+    })
+    .finally(() => {
+      // Stop loading state.
+      setIsClaiming(false);
+    });
+  }
   
-  // This is the case where we have the user's address
-  // which means they've connected their wallet to our site!
+  // Render mint nft screen.
   return (
-    <div className="landing">
-      <h1>👀 wallet connected, now what!</h1>
-    </div>);
+    <div className="mint-nft">
+      <h1>Mint your free 🍪DAO Membership NFT</h1>
+      <button
+        disabled={isClaiming}
+        onClick={() => mintNft()}
+      >
+        {isClaiming ? "Minting..." : "Mint your nft (FREE)"}
+      </button>
+    </div>
+  );
 };
 
 export default App;
